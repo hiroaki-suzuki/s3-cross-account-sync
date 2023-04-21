@@ -1,0 +1,59 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates sample of cross account s3 sync environment.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: hs-s3-cross-sync-old
+  NewAppName:
+    Type: String
+    Default: hs-s3-cross-sync-new
+  S3SyncExecUserArn:
+    Type: String
+
+Resources:
+  OldS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ "-", [ !Ref AppName , "bucket" ] ]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+  S3SyncPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Join [ "-", [ !Ref AppName , "s3", "sync", "policy" ] ]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !Sub ${OldS3Bucket.Arn}
+              - !Sub ${OldS3Bucket.Arn}/*
+              - !Sub arn:aws:s3:::${NewAppName}-bucket
+              - !Sub arn:aws:s3:::${NewAppName}-bucket/*
+  S3SyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Join [ "-", [ !Ref AppName , "s3", "sync", "role" ] ]
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref S3SyncExecUserArn
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Ref S3SyncPolicy

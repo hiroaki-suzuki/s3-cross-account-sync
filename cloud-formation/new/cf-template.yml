@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template creates sample of cross account s3 sync environment.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: hs-s3-cross-sync-new
+  OldS3SyncRoleArn:
+    Type: String
+
+Resources:
+  NewS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join [ "-", [ !Ref AppName , "bucket" ] ]
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+  NewS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref NewS3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref OldS3SyncRoleArn
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:DeleteObject
+              - s3:ListBucket
+            Resource:
+              - !Sub ${NewS3Bucket.Arn}
+              - !Sub ${NewS3Bucket.Arn}/*
